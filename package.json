@@ -1,0 +1,8 @@
+{
+    "name": "wanderlust-api",
+    "version": "1.0.0",
+    "type": "module",
+    "dependencies": {
+        "mysql2": "^3.9.7"
+    }
+}
