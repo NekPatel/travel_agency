@@ -801,7 +801,7 @@ body::before{
           <thead>
             <tr><th>ID</th><th>Customer</th><th>Package</th><th>Amount</th><th>Status</th></tr>
           </thead>
-          <tbody>
+          <tbody id="dashboard-bookings-tbody">
             <tr><td>#1</td><td>John Smith</td><td>Himalayan Adventure</td><td>$1,200</td><td><span class="badge badge-confirmed">Confirmed</span></td></tr>
             <tr><td>#2</td><td>Aditi Sharma</td><td>Wonders of Italy</td><td>$1,500</td><td><span class="badge badge-confirmed">Confirmed</span></td></tr>
             <tr><td>#3</td><td>Carlos Lopez</td><td>African Safari</td><td>$2,200</td><td><span class="badge badge-pending">Pending</span></td></tr>
@@ -932,7 +932,7 @@ body::before{
     <div class="card">
       <table class="data-table">
         <thead><tr><th>Booking ID</th><th>Customer</th><th>Package</th><th>Start Date</th><th>End Date</th><th>Amount</th><th>Status</th><th>Action</th></tr></thead>
-        <tbody>
+        <tbody id="bookings-tbody">
           <tr><td>#B001</td><td>John Smith</td><td>Himalayan Adventure</td><td>Feb 1, 2025</td><td>Feb 10, 2025</td><td>$1,200</td><td><span class="badge badge-confirmed">Confirmed</span></td><td><span style="color:var(--cyan);cursor:pointer;font-size:12px" onclick="toast('Viewing booking #B001')">View</span></td></tr>
           <tr><td>#B002</td><td>Aditi Sharma</td><td>Wonders of Italy</td><td>Mar 1, 2025</td><td>Mar 8, 2025</td><td>$1,500</td><td><span class="badge badge-confirmed">Confirmed</span></td><td><span style="color:var(--cyan);cursor:pointer;font-size:12px" onclick="toast('Viewing booking #B002')">View</span></td></tr>
           <tr><td>#B003</td><td>Carlos Lopez</td><td>African Safari</td><td>Apr 1, 2025</td><td>Apr 8, 2025</td><td>$2,200</td><td><span class="badge badge-pending">Pending</span></td><td><span style="color:var(--cyan);cursor:pointer;font-size:12px" onclick="toast('Viewing booking #B003')">View</span></td></tr>
@@ -1059,7 +1059,7 @@ body::before{
     <div class="card">
       <table class="data-table">
         <thead><tr><th>ID</th><th>Name</th><th>Email</th><th>Phone</th><th>Nationality</th><th>Passport</th></tr></thead>
-        <tbody>
+        <tbody id="customers-tbody">
           <tr><td>#C001</td><td>John Smith</td><td>john.smith@email.com</td><td>+14151234567</td><td>🇺🇸 USA</td><td>US1234567</td></tr>
           <tr><td>#C002</td><td>Aditi Sharma</td><td>aditi.sharma@gmail.com</td><td>+919876543210</td><td>🇮🇳 India</td><td>IN8796543</td></tr>
           <tr><td>#C003</td><td>Carlos Lopez</td><td>carlos.lopez@outlook.com</td><td>+34123456789</td><td>🇪🇸 Spain</td><td>ES7654321</td></tr>
@@ -1297,17 +1297,17 @@ body::before{
     <div class="modal-title">Add Customer</div>
     <div class="modal-sub">Register a new traveller</div>
     <div class="form-row">
-      <div class="form-group"><label class="form-label">Full Name</label><input type="text" class="form-input" placeholder="e.g. John Smith"></div>
-      <div class="form-group"><label class="form-label">Nationality</label><input type="text" class="form-input" placeholder="e.g. USA"></div>
+      <div class="form-group"><label class="form-label">Full Name</label><input type="text" id="cust-name" class="form-input" placeholder="e.g. John Smith"></div>
+      <div class="form-group"><label class="form-label">Nationality</label><input type="text" id="cust-nat" class="form-input" placeholder="e.g. USA"></div>
     </div>
-    <div class="form-group"><label class="form-label">Email</label><input type="email" class="form-input" placeholder="customer@email.com"></div>
+    <div class="form-group"><label class="form-label">Email</label><input type="email" id="cust-email" class="form-input" placeholder="customer@email.com"></div>
     <div class="form-row">
-      <div class="form-group"><label class="form-label">Phone</label><input type="text" class="form-input" placeholder="+1-XXX-XXX-XXXX"></div>
-      <div class="form-group"><label class="form-label">Passport No</label><input type="text" class="form-input" placeholder="e.g. US1234567"></div>
+      <div class="form-group"><label class="form-label">Phone</label><input type="text" id="cust-phone" class="form-input" placeholder="+1-XXX-XXX-XXXX"></div>
+      <div class="form-group"><label class="form-label">Passport No</label><input type="text" id="cust-pass" class="form-input" placeholder="e.g. US1234567"></div>
     </div>
     <div class="modal-actions">
       <button class="btn-cancel" onclick="closeModal('customer-modal')">Cancel</button>
-      <button class="btn-primary" onclick="saveClose('customer-modal','Customer registered!')">Register</button>
+      <button class="btn-primary" onclick="submitCustomer()">Register</button>
     </div>
   </div>
 </div>
@@ -1415,6 +1415,128 @@ function filterPill(el){
 // date
 document.getElementById('live-date').textContent = new Date().toLocaleDateString('en-US',{
   weekday:'short',month:'short',day:'numeric',year:'numeric'
+});
+
+// ==========================================
+// API INTEGRATION & DYNAMIC RENDERING
+// ==========================================
+
+const API_BASE = "/api";
+
+async function fetchDashboard() {
+  try {
+    const res = await fetch(API_BASE + '/dashboard');
+    const json = await res.json();
+    if(json.success && json.data) {
+      const db = json.data;
+      // You can update metric cards here dynamically if you assign IDs to them
+      
+      const tbody = document.getElementById('dashboard-bookings-tbody');
+      if (tbody && db.recent_bookings) {
+        tbody.innerHTML = "";
+        db.recent_bookings.forEach(b => {
+          let badgeClass = "badge-pending";
+          if(b.status === "Confirmed") badgeClass = "badge-confirmed";
+          if(b.status === "Cancelled") badgeClass = "badge-cancelled";
+          if(b.status === "Completed") badgeClass = "badge-completed";
+          
+          tbody.innerHTML += `<tr>
+            <td>#B${b.booking_id}</td>
+            <td>${b.customer}</td>
+            <td>${b.package}</td>
+            <td>$${b.Total_Amount}</td>
+            <td><span class="badge ${badgeClass}">${b.status}</span></td>
+          </tr>`;
+        });
+      }
+    }
+  } catch(e) { console.error("Dashboard error:", e); }
+}
+
+async function fetchCustomers() {
+  try {
+    const res = await fetch(API_BASE + '/customers');
+    const json = await res.json();
+    if (json.success && json.data) {
+      const tbody = document.getElementById('customers-tbody');
+      if (!tbody) return;
+      tbody.innerHTML = "";
+      
+      json.data.forEach(cust => {
+        tbody.innerHTML += `<tr>
+          <td>#C${cust.customer_id}</td>
+          <td>${cust.name}</td>
+          <td>${cust.email}</td>
+          <td>${cust.phone || 'N/A'}</td>
+          <td>${cust.Nationality || 'N/A'}</td>
+          <td>${cust.passport_number || cust.passport_no || 'N/A'}</td>
+        </tr>`;
+      });
+    }
+  } catch(e) { console.error("Customer error:", e); }
+}
+
+async function submitCustomer() {
+  const payload = {
+    name: document.getElementById('cust-name').value,
+    email: document.getElementById('cust-email').value,
+    phone: document.getElementById('cust-phone').value,
+    nationality: document.getElementById('cust-nat').value,
+    passport_no: document.getElementById('cust-pass').value
+  };
+
+  try {
+    const res = await fetch(API_BASE + '/customers', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+    
+    if (res.ok) {
+      toast("Customer registered securely in TiDB!");
+      closeModal('customer-modal');
+      fetchCustomers(); 
+      ['cust-name','cust-email','cust-phone','cust-nat','cust-pass'].forEach(id => document.getElementById(id).value = '');
+    } else {
+      toast("Error creating customer!");
+    }
+  } catch (e) { toast("Network Error"); }
+}
+
+async function fetchBookings() {
+  try {
+    const res = await fetch(API_BASE + '/bookings');
+    const json = await res.json();
+    if (json.success && json.data) {
+      const tbody = document.getElementById('bookings-tbody');
+      if (!tbody) return;
+      tbody.innerHTML = "";
+      
+      json.data.forEach(b => {
+        let badgeClass = "badge-pending";
+        if(b.status === "Confirmed") badgeClass = "badge-confirmed";
+        if(b.status === "Cancelled") badgeClass = "badge-cancelled";
+        if(b.status === "Completed") badgeClass = "badge-completed";
+  
+        tbody.innerHTML += `<tr>
+          <td>#B${b.booking_id}</td>
+          <td>Customer #${b.customer_id}</td>
+          <td>Pkg #${b.package_id}</td>
+          <td>${b.Booking_Date || 'N/A'}</td>
+          <td>--</td>
+          <td>$${b.Total_Amount}</td>
+          <td><span class="badge ${badgeClass}">${b.status}</span></td>
+          <td><span style="color:var(--cyan);cursor:pointer;font-size:12px" onclick="toast('Viewing booking #${b.booking_id}')">View</span></td>
+        </tr>`;
+      });
+    }
+  } catch(e) { console.error("Bookings error:", e); }
+}
+
+window.addEventListener('DOMContentLoaded', () => {
+  fetchDashboard();
+  fetchCustomers();
+  fetchBookings();
 });
 </script>
 </body>
